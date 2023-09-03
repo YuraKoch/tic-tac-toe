@@ -1,7 +1,7 @@
 const http = require("http");
-const WebsocketServer = require("websocket").server
+const WebsocketServer = require("websocket").server;
 const httpServer = http.createServer();
-httpServer.listen(8080, () => console.log("Listening.. on 8080"));
+httpServer.listen(8080);
 
 let clientIdCounter = 0;
 let gameIdCounter = 0;
@@ -14,7 +14,7 @@ wsServer.on("request", request => {
   const connection = request.accept(null, request.origin);
   const clientId = connectClient(connection);
 
-  connection.on('close', (reasonCode, description) => {
+  connection.on('close', () => {
     unmatchedClientIds = unmatchedClientIds.filter(unmatchedClientId => unmatchedClientId !== clientId);
     connection.close();
   });
@@ -124,8 +124,6 @@ function checkWin(field) {
 function checkDraw(field) {
   return field.every(simbol => simbol === "X" || simbol === "O");
 }
-
-
 
 function createClientId() {
   clientIdCounter++;
