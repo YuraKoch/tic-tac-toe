@@ -1,0 +1,55 @@
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  overflow: hidden;
+  background-color: #12bdac;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 20vmin);
+  grid-template-rows: repeat(3, 20vmin);
+  gap: 2vmin;
+  background-color: #0ca192;
+}
+
+.cell {
+  position: relative;
+  cursor: pointer;
+  background-color: #12bdac;
+}
+
+.cell.X:before,
+.cell.X:after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 15vmin;
+  height: 2vmin;
+  background: #545454;
+}
+
+.cell.X:before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.cell.X:after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.cell.O:before,
+.cell.O:after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10vmin;
+  height: 10vmin;
+  border-radius: 50%;
+  border: 2vmin solid #f2ebd3;
+}
