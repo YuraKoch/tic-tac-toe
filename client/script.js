@@ -1,6 +1,5 @@
 const board = document.querySelector('.board');
 const cells = document.querySelectorAll('.cell');
-let currentPlayer = 'X';
 let field = ["", "", "", "", "", "", "", "", "",];
 let isGameActive = false;
 
@@ -36,16 +35,18 @@ ws.onmessage = message => {
       isGameActive = true;
     }
   }
+
+  if (response.method === "result") {
+    isGameActive = false;
+    setTimeout(() => {
+      alert(response.message);
+    }, 100);
+  }
 };
 
 function startGame() {
   isGameActive = move === simbol;
 }
-
-function stopGame() {
-  isGameActive = false;;
-}
-
 
 cells.forEach((cell) => cell.addEventListener('click', onCellClick));
 
@@ -58,7 +59,7 @@ function makeMove(cell) {
     return;
   }
 
-  stopGame();
+  isGameActive = false;
 
   cell.dataset.simbol = simbol;
   cell.classList.add(simbol);
@@ -90,9 +91,9 @@ function makeMove(cell) {
   // }
 
   // if (checkDraw()) {
-  //   setTimeout(() => {
-  //     alert('Draw!');
-  //   }, 100);
+  // setTimeout(() => {
+  //   alert('Draw!');
+  // }, 100);
   //   isGameActive = false;
   //   return;
   // }
@@ -108,28 +109,4 @@ function updateField() {
       cell.classList.add(field[index]);
     }
   });
-}
-
-const winningCombos = [
-  [0, 1, 2], [3, 4, 5], [6, 7, 8],  // Rows
-  [0, 3, 6], [1, 4, 7], [2, 5, 8],  // Columns
-  [0, 4, 8], [2, 4, 6]              // Diagonals
-];
-
-function checkWin() {
-  for (const combo of winningCombos) {
-    const [first, second, third] = combo;
-    if (cells[first].dataset.simbol &&
-      cells[first].dataset.simbol === cells[second].dataset.simbol &&
-      cells[first].dataset.simbol === cells[third].dataset.simbol) {
-      isGameActive = false;
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function checkDraw() {
-  return [...cells].every(cell => cell.dataset.simbol !== undefined);
 }

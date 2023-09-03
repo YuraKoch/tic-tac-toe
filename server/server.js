@@ -14,9 +14,7 @@ wsServer.on("request", request => {
   const connection = request.accept(null, request.origin);
   const clientId = connectClient(connection);
 
-  // Обработчик события закрытия соединения
   connection.on('close', (reasonCode, description) => {
-    console.log(`Клиент отключился. Код: ${reasonCode}, Причина: ${description}`);
     unmatchedClientIds = unmatchedClientIds.filter(unmatchedClientId => unmatchedClientId !== clientId);
     connection.close();
   });
@@ -26,17 +24,7 @@ wsServer.on("request", request => {
   connection.on("message", message => {
     const result = JSON.parse(message.utf8Data);
 
-    if (result.method === "click") {
-      const game = games[result.gameId];
-
-      game.clients.forEach(joinedClientId => {
-        clientConnections[joinedClientId].connection.send(JSON.stringify({
-          "method": "move",
-          "move": result.simbol === "X" ? "O" : "X",
-          "field": result.field,
-        }));
-      });
-    }
+    if (result.method === "click") { onClickHandler(result); }
   });
 });
 
@@ -82,6 +70,59 @@ function matchClients(clientId) {
       "game": game,
     }));
   });
+}
+
+function onClickHandler(result) {
+  const game = games[result.gameId];
+
+  if (checkWin(result.field)) {
+    game.clients.forEach(joinedClientId => {
+      clientConnections[joinedClientId].connection.send(JSON.stringify({
+        "method": "result",
+        "message": `${result.simbol} win!`,
+      }));
+    });
+    return;
+  }
+
+  if (checkDraw(result.field)) {
+    game.clients.forEach(joinedClientId => {
+      clientConnections[joinedClientId].connection.send(JSON.stringify({
+        "method": "result",
+        "message": "Draw!",
+      }));
+    });
+    return;
+  }
+
+  game.clients.forEach(joinedClientId => {
+    clientConnections[joinedClientId].connection.send(JSON.stringify({
+      "method": "move",
+      "move": result.simbol === "X" ? "O" : "X",
+      "field": result.field,
+    }));
+  });
+}
+
+const winningCombos = [
+  [0, 1, 2], [3, 4, 5], [6, 7, 8],  // Rows
+  [0, 3, 6], [1, 4, 7], [2, 5, 8],  // Columns
+  [0, 4, 8], [2, 4, 6]              // Diagonals
+];
+
+function checkWin(field) {
+  for (const combo of winningCombos) {
+    const [first, second, third] = combo;
+    if (field[first] && field[first] === field[second] && field[first] === field[third]) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function checkDraw(field) {
+  return field.every(simbol => simbol === "X" || simbol === "O");
 }
 
 
