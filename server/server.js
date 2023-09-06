@@ -1,6 +1,8 @@
 const http = require("http");
-const WebsocketServer = require("websocket").server;
+const WebSocket = require("ws");
 const httpServer = http.createServer();
+const wss = new WebSocket.Server({ server: httpServer });
+
 httpServer.listen(8080);
 
 let clientIdCounter = 0;
@@ -9,12 +11,10 @@ const clientConnections = {};
 const games = {};
 let unmatchedClientIds = [];
 
-const wsServer = new WebsocketServer({ "httpServer": httpServer });
-wsServer.on("request", request => {
-  const connection = request.accept(null, request.origin);
+wss.on("connection", connection => {
   const clientId = connectClient(connection);
 
-  connection.on('close', () => {
+  connection.on("close", () => {
     unmatchedClientIds = unmatchedClientIds.filter(unmatchedClientId => unmatchedClientId !== clientId);
     connection.close();
   });
@@ -22,21 +22,23 @@ wsServer.on("request", request => {
   matchClients(clientId);
 
   connection.on("message", message => {
-    const result = JSON.parse(message.utf8Data);
+    const result = JSON.parse(message);
 
-    if (result.method === "click") { onClickHandler(result); }
+    if (result.method === "click") {
+      onClickHandler(result);
+    }
   });
 });
 
 function connectClient(connection) {
   const clientId = createClientId();
   clientConnections[clientId] = {
-    "connection": connection
+    connection: connection,
   };
 
   connection.send(JSON.stringify({
-    "method": "connect",
-    "clientId": clientId,
+    method: "connect",
+    clientId: clientId,
   }));
 
   return clientId;
@@ -51,23 +53,23 @@ function matchClients(clientId) {
   const firstClientId = unmatchedClientIds.shift();
   const secondClientId = unmatchedClientIds.shift();
   const game = {
-    "gameId": gameId,
-    "clients": [firstClientId, secondClientId],
+    gameId: gameId,
+    clients: [firstClientId, secondClientId],
   };
   game[firstClientId] = {
-    "simbol": "X",
-    "move": "X",
+    simbol: "X",
+    move: "X",
   };
   game[secondClientId] = {
-    "simbol": "O",
-    "move": "X",
+    simbol: "O",
+    move: "X",
   };
   games[gameId] = game;
 
   game.clients.forEach(joinedClientId => {
     clientConnections[joinedClientId].connection.send(JSON.stringify({
-      "method": "join",
-      "game": game,
+      method: "join",
+      game: game,
     }));
   });
 }
@@ -78,8 +80,8 @@ function onClickHandler(result) {
   if (checkWin(result.field)) {
     game.clients.forEach(joinedClientId => {
       clientConnections[joinedClientId].connection.send(JSON.stringify({
-        "method": "result",
-        "message": `${result.simbol} win!`,
+        method: "result",
+        message: `${result.simbol} win!`,
       }));
     });
     return;
@@ -88,8 +90,8 @@ function onClickHandler(result) {
   if (checkDraw(result.field)) {
     game.clients.forEach(joinedClientId => {
       clientConnections[joinedClientId].connection.send(JSON.stringify({
-        "method": "result",
-        "message": "Draw!",
+        method: "result",
+        message: "Draw!",
       }));
     });
     return;
@@ -97,9 +99,9 @@ function onClickHandler(result) {
 
   game.clients.forEach(joinedClientId => {
     clientConnections[joinedClientId].connection.send(JSON.stringify({
-      "method": "move",
-      "move": result.simbol === "X" ? "O" : "X",
-      "field": result.field,
+      method: "move",
+      move: result.simbol === "X" ? "O" : "X",
+      field: result.field,
     }));
   });
 }

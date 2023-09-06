@@ -10,7 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "websocket": "^1.0.34"
+    "ws": "^8.14.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"
