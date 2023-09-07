@@ -1,5 +1,6 @@
 body {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   height: 100vh;
@@ -52,4 +53,14 @@ body {
   height: 10vmin;
   border-radius: 50%;
   border: 2vmin solid #f2ebd3;
+}
+
+.message {
+  margin-bottom: 2vmin;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 4vmin;
+  font-weight: bold;
+  text-transform: uppercase;
+  color: #f2ebd3;
+  user-select: none;
 }

@@ -1,54 +1,65 @@
-const board = document.querySelector('.board');
-const cells = document.querySelectorAll('.cell');
+const cellElements = document.querySelectorAll('.cell');
+const messageElement = document.querySelector('.message');
 let field = ["", "", "", "", "", "", "", "", "",];
 let isGameActive = false;
-
 let clientId = null;
 let gameId = null;
 let simbol = null;
-let move = null;
+let turn = null;
 
 let ws = new WebSocket("ws://localhost:8080");
 
 ws.onmessage = message => {
   const response = JSON.parse(message.data);
+
   if (response.method === "connect") {
     clientId = response.clientId;
   }
 
   if (response.method === "join") {
-    console.log(response);
     gameId = response.game.gameId;
     simbol = response.game[clientId].simbol;
-    move = response.game[clientId].move;
+    turn = response.game[clientId].turn;
 
-    startGame();
+    if (simbol === turn) {
+      isGameActive = true;
+      messageElement.textContent = "move";
+    } else {
+      isGameActive = false;
+      messageElement.textContent = `waiting ${turn}...`;
+    }
   }
 
   if (response.method === "move") {
-    console.log(response);
     field = response.field;
-    move = response.move;
+    turn = response.turn;
+    updateField();
 
-    if (simbol === move) {
-      updateField();
+    if (simbol === turn) {
       isGameActive = true;
+      messageElement.textContent = "move";
+    } else {
+      isGameActive = false;
+      messageElement.textContent = `waiting ${turn}...`;
     }
   }
 
   if (response.method === "result") {
+    field = response.field;
+    updateField();
     isGameActive = false;
     setTimeout(() => {
-      alert(response.message);
+      messageElement.textContent = response.message;
     }, 100);
+  }
+
+  if (response.method === "left") {
+    isGameActive = false;
+    messageElement.textContent = response.message;
   }
 };
 
-function startGame() {
-  isGameActive = move === simbol;
-}
-
-cells.forEach((cell) => cell.addEventListener('click', onCellClick));
+cellElements.forEach((cell) => cell.addEventListener('click', onCellClick));
 
 function onCellClick(event) {
   makeMove(event.target);
@@ -64,14 +75,7 @@ function makeMove(cell) {
   cell.dataset.simbol = simbol;
   cell.classList.add(simbol);
 
-  cells.forEach((cell, index) => field[index] = cell.dataset.simbol || "");
-
-  console.log({
-    "method": "click",
-    "gameId": gameId,
-    "simbol": simbol,
-    "field": field,
-  });
+  cellElements.forEach((cell, index) => field[index] = cell.dataset.simbol || "");
 
   ws.send(JSON.stringify({
     "method": "click",
@@ -79,28 +83,10 @@ function makeMove(cell) {
     "simbol": simbol,
     "field": field,
   }));
-
-
-
-  // if (checkWin()) {
-  //   setTimeout(() => {
-  //     alert(`${simbol} win!`);
-  //   }, 100);
-  //   isGameActive = false;
-  //   return;
-  // }
-
-  // if (checkDraw()) {
-  // setTimeout(() => {
-  //   alert('Draw!');
-  // }, 100);
-  //   isGameActive = false;
-  //   return;
-  // }
 }
 
 function updateField() {
-  cells.forEach((cell, index) => {
+  cellElements.forEach((cell, index) => {
     cell.classList.remove("X", "O");
     if (field[index] === "") {
       delete cell.dataset.simbol;
