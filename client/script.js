@@ -2,8 +2,6 @@ const cellElements = document.querySelectorAll('.cell');
 const messageElement = document.querySelector('.message');
 let field = ["", "", "", "", "", "", "", "", "",];
 let isGameActive = false;
-let clientId = null;
-let gameId = null;
 let simbol = null;
 let turn = null;
 
@@ -12,41 +10,24 @@ let ws = new WebSocket("ws://localhost:8080");
 ws.onmessage = message => {
   const response = JSON.parse(message.data);
 
-  if (response.method === "connect") {
-    clientId = response.clientId;
-  }
-
   if (response.method === "join") {
-    gameId = response.game.gameId;
-    simbol = response.game[clientId].simbol;
-    turn = response.game[clientId].turn;
-
-    if (simbol === turn) {
-      isGameActive = true;
-      messageElement.textContent = "move";
-    } else {
-      isGameActive = false;
-      messageElement.textContent = `waiting ${turn}...`;
-    }
+    simbol = response.simbol;
+    turn = response.turn;
+    isGameActive = simbol === turn;
+    updateMessage();
   }
 
-  if (response.method === "move") {
+  if (response.method === "update") {
     field = response.field;
     turn = response.turn;
-    updateField();
-
-    if (simbol === turn) {
-      isGameActive = true;
-      messageElement.textContent = "move";
-    } else {
-      isGameActive = false;
-      messageElement.textContent = `waiting ${turn}...`;
-    }
+    isGameActive = simbol === turn;
+    updateBoard();
+    updateMessage();
   }
 
   if (response.method === "result") {
     field = response.field;
-    updateField();
+    updateBoard();
     isGameActive = false;
     setTimeout(() => {
       messageElement.textContent = response.message;
@@ -59,40 +40,37 @@ ws.onmessage = message => {
   }
 };
 
-cellElements.forEach((cell) => cell.addEventListener('click', onCellClick));
+cellElements.forEach((cell, index) => cell.addEventListener('click', (event) => {
+  makeMove(event.target, index);
+}));
 
-function onCellClick(event) {
-  makeMove(event.target);
-}
-
-function makeMove(cell) {
-  if (!isGameActive || cell.dataset.simbol !== undefined) {
+function makeMove(cell, index) {
+  if (!isGameActive || field[index] !== "") {
     return;
   }
 
   isGameActive = false;
-
-  cell.dataset.simbol = simbol;
   cell.classList.add(simbol);
-
-  cellElements.forEach((cell, index) => field[index] = cell.dataset.simbol || "");
+  field[index] = simbol;
 
   ws.send(JSON.stringify({
-    "method": "click",
-    "gameId": gameId,
+    "method": "move",
     "simbol": simbol,
     "field": field,
   }));
 }
 
-function updateField() {
+function updateBoard() {
   cellElements.forEach((cell, index) => {
     cell.classList.remove("X", "O");
-    if (field[index] === "") {
-      delete cell.dataset.simbol;
-    } else {
-      cell.dataset.simbol = field[index];
-      cell.classList.add(field[index]);
-    }
+    field[index] !== "" && cell.classList.add(field[index]);
   });
+}
+
+function updateMessage() {
+  if (simbol === turn) {
+    messageElement.textContent = "move";
+  } else {
+    messageElement.textContent = `waiting ${turn}...`;
+  }
 }

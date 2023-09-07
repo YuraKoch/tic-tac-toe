@@ -6,89 +6,62 @@ const wss = new WebSocket.Server({ server: httpServer });
 httpServer.listen(8080);
 
 const clientConnections = {};
-const games = {};
-let unmatchedClientIds = [];
+const opponents = {};
+let clientIdsWaitingMatch = [];
 
 wss.on("connection", connection => {
   const clientId = connectClient(connection);
-
-  connection.on("close", () => {
-    connection.close();
-    const isLeftUnmachedClient = unmatchedClientIds.some(unmatchedClientId => unmatchedClientId === clientId);
-    if (isLeftUnmachedClient) {
-      unmatchedClientIds = unmatchedClientIds.filter(unmatchedClientId => unmatchedClientId !== clientId);
-      return;
-    }
-
-    const gameId = clientConnections[clientId].gameId;
-    const opponentClientId = games[gameId].clients[0] === clientId ? games[gameId].clients[1] : games[gameId].clients[0];
-    clientConnections[opponentClientId].connection.send(JSON.stringify({
-      method: "left",
-      message: "opponent left",
-    }));
-  });
 
   matchClients(clientId);
 
   connection.on("message", message => {
     const result = JSON.parse(message);
-    if (result.method === "click") {
-      onClickHandler(result);
+    if (result.method === "move") {
+      moveHandler(result, clientId);
     }
+  });
+
+  connection.on("close", () => {
+    closeClient(connection, clientId);
   });
 });
 
 function connectClient(connection) {
   const clientId = createClientId();
-  clientConnections[clientId] = {
-    connection: connection,
-  };
-
-  connection.send(JSON.stringify({
-    method: "connect",
-    clientId: clientId,
-  }));
-
+  clientConnections[clientId] = { connection };
   return clientId;
 }
 
 function matchClients(clientId) {
-  unmatchedClientIds.push(clientId);
+  clientIdsWaitingMatch.push(clientId);
 
-  if (unmatchedClientIds.length < 2) return;
+  if (clientIdsWaitingMatch.length < 2) return;
 
-  const gameId = createGameId();
-  const firstClientId = unmatchedClientIds.shift();
-  const secondClientId = unmatchedClientIds.shift();
-  const game = {
-    gameId: gameId,
-    clients: [firstClientId, secondClientId],
-  };
-  game[firstClientId] = {
+  const firstClientId = clientIdsWaitingMatch.shift();
+  const secondClientId = clientIdsWaitingMatch.shift();
+
+  opponents[firstClientId] = secondClientId;
+  opponents[secondClientId] = firstClientId;
+
+  clientConnections[firstClientId].connection.send(JSON.stringify({
+    method: "join",
     simbol: "X",
-    turn: "X",
-  };
-  game[secondClientId] = {
-    simbol: "O",
-    turn: "X",
-  };
-  games[gameId] = game;
+    turn: "X"
+  }));
 
-  game.clients.forEach(joinedClientId => {
-    clientConnections[joinedClientId].gameId = gameId;
-    clientConnections[joinedClientId].connection.send(JSON.stringify({
-      method: "join",
-      game: game,
-    }));
-  });
+  clientConnections[secondClientId].connection.send(JSON.stringify({
+    method: "join",
+    simbol: "O",
+    turn: "X"
+  }));
 }
 
-function onClickHandler(result) {
-  const game = games[result.gameId];
+function moveHandler(result, clientId) {
+  const opponentClientId = opponents[clientId];
 
   if (checkWin(result.field)) {
-    game.clients.forEach(joinedClientId => {
-      clientConnections[joinedClientId].connection.send(JSON.stringify({
+    [clientId, opponentClientId].forEach(cId => {
+      clientConnections[cId].connection.send(JSON.stringify({
         method: "result",
         message: `${result.simbol} win`,
         field: result.field,
@@ -98,8 +71,8 @@ function onClickHandler(result) {
   }
 
   if (checkDraw(result.field)) {
-    game.clients.forEach(joinedClientId => {
-      clientConnections[joinedClientId].connection.send(JSON.stringify({
+    [clientId, opponentClientId].forEach(cId => {
+      clientConnections[cId].connection.send(JSON.stringify({
         method: "result",
         message: "Draw",
         field: result.field,
@@ -108,13 +81,28 @@ function onClickHandler(result) {
     return;
   }
 
-  game.clients.forEach(joinedClientId => {
-    clientConnections[joinedClientId].connection.send(JSON.stringify({
-      method: "move",
+  [clientId, opponentClientId].forEach(cId => {
+    clientConnections[cId].connection.send(JSON.stringify({
+      method: "update",
       turn: result.simbol === "X" ? "O" : "X",
       field: result.field,
     }));
   });
+}
+
+function closeClient(connection, clientId) {
+  connection.close();
+  const isLeftUnmachedClient = clientIdsWaitingMatch.some(unmatchedClientId => unmatchedClientId === clientId);
+
+  if (isLeftUnmachedClient) {
+    clientIdsWaitingMatch = clientIdsWaitingMatch.filter(unmatchedClientId => unmatchedClientId !== clientId);
+  } else {
+    const opponentClientId = opponents[clientId];
+    clientConnections[opponentClientId].connection.send(JSON.stringify({
+      method: "left",
+      message: "opponent left",
+    }));
+  }
 }
 
 const winningCombos = [
@@ -124,14 +112,10 @@ const winningCombos = [
 ];
 
 function checkWin(field) {
-  for (const combo of winningCombos) {
+  return winningCombos.some(combo => {
     const [first, second, third] = combo;
-    if (field[first] && field[first] === field[second] && field[first] === field[third]) {
-      return true;
-    }
-  }
-
-  return false;
+    return field[first] !== "" && field[first] === field[second] && field[first] === field[third];
+  });
 }
 
 function checkDraw(field) {
@@ -142,10 +126,4 @@ let clientIdCounter = 0;
 function createClientId() {
   clientIdCounter++;
   return clientIdCounter;
-}
-
-let gameIdCounter = 0;
-function createGameId() {
-  gameIdCounter++;
-  return gameIdCounter;
 }
