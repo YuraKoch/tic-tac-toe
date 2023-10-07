@@ -1,8 +1,14 @@
+const express = require('express');
+const path = require('path');
 const http = require("http");
 const WebSocket = require("ws");
+
+const app = express();
+app.use(express.static(path.join(__dirname, '..', 'client')));
+app.listen(3000);
+
 const httpServer = http.createServer();
 const wss = new WebSocket.Server({ server: httpServer });
-
 httpServer.listen(8080);
 
 const clientConnections = {};
