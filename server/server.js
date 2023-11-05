@@ -46,13 +46,13 @@ function matchClients(clientId) {
 
   clientConnections[firstClientId].send(JSON.stringify({
     method: "join",
-    simbol: "X",
+    symbol: "X",
     turn: "X"
   }));
 
   clientConnections[secondClientId].send(JSON.stringify({
     method: "join",
-    simbol: "O",
+    symbol: "O",
     turn: "X"
   }));
 }
@@ -64,7 +64,7 @@ function moveHandler(result, clientId) {
     [clientId, opponentClientId].forEach(cId => {
       clientConnections[cId].send(JSON.stringify({
         method: "result",
-        message: `${result.simbol} win`,
+        message: `${result.symbol} win`,
         field: result.field,
       }));
     });
@@ -85,7 +85,7 @@ function moveHandler(result, clientId) {
   [clientId, opponentClientId].forEach(cId => {
     clientConnections[cId].send(JSON.stringify({
       method: "update",
-      turn: result.simbol === "X" ? "O" : "X",
+      turn: result.symbol === "X" ? "O" : "X",
       field: result.field,
     }));
   });
@@ -120,7 +120,7 @@ function checkWin(field) {
 }
 
 function checkDraw(field) {
-  return field.every(simbol => simbol === "X" || simbol === "O");
+  return field.every(symbol => symbol === "X" || symbol === "O");
 }
 
 let clientIdCounter = 0;

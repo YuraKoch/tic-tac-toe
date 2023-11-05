@@ -2,7 +2,7 @@ const cellElements = document.querySelectorAll('.cell');
 const messageElement = document.querySelector('.message');
 let field = ["", "", "", "", "", "", "", "", "",];
 let isGameActive = false;
-let simbol = null;
+let symbol = null;
 let turn = null;
 
 let ws = new WebSocket("ws://localhost:8080");
@@ -11,16 +11,16 @@ ws.onmessage = message => {
   const response = JSON.parse(message.data);
 
   if (response.method === "join") {
-    simbol = response.simbol;
+    symbol = response.symbol;
     turn = response.turn;
-    isGameActive = simbol === turn;
+    isGameActive = symbol === turn;
     updateMessage();
   }
 
   if (response.method === "update") {
     field = response.field;
     turn = response.turn;
-    isGameActive = simbol === turn;
+    isGameActive = symbol === turn;
     updateBoard();
     updateMessage();
   }
@@ -50,12 +50,12 @@ function makeMove(cell, index) {
   }
 
   isGameActive = false;
-  cell.classList.add(simbol);
-  field[index] = simbol;
+  cell.classList.add(symbol);
+  field[index] = symbol;
 
   ws.send(JSON.stringify({
     "method": "move",
-    "simbol": simbol,
+    "symbol": symbol,
     "field": field,
   }));
 }
@@ -68,7 +68,7 @@ function updateBoard() {
 }
 
 function updateMessage() {
-  if (simbol === turn) {
+  if (symbol === turn) {
     messageElement.textContent = "move";
   } else {
     messageElement.textContent = `waiting ${turn}...`;
