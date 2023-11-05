@@ -16,7 +16,8 @@ const opponents = {};
 let clientIdsWaitingMatch = [];
 
 wss.on("connection", connection => {
-  const clientId = connectClient(connection);
+  const clientId = createClientId();
+  clientConnections[clientId] = connection;
 
   matchClients(clientId);
 
@@ -32,12 +33,6 @@ wss.on("connection", connection => {
   });
 });
 
-function connectClient(connection) {
-  const clientId = createClientId();
-  clientConnections[clientId] = { connection };
-  return clientId;
-}
-
 function matchClients(clientId) {
   clientIdsWaitingMatch.push(clientId);
 
@@ -49,13 +44,13 @@ function matchClients(clientId) {
   opponents[firstClientId] = secondClientId;
   opponents[secondClientId] = firstClientId;
 
-  clientConnections[firstClientId].connection.send(JSON.stringify({
+  clientConnections[firstClientId].send(JSON.stringify({
     method: "join",
     simbol: "X",
     turn: "X"
   }));
 
-  clientConnections[secondClientId].connection.send(JSON.stringify({
+  clientConnections[secondClientId].send(JSON.stringify({
     method: "join",
     simbol: "O",
     turn: "X"
@@ -67,7 +62,7 @@ function moveHandler(result, clientId) {
 
   if (checkWin(result.field)) {
     [clientId, opponentClientId].forEach(cId => {
-      clientConnections[cId].connection.send(JSON.stringify({
+      clientConnections[cId].send(JSON.stringify({
         method: "result",
         message: `${result.simbol} win`,
         field: result.field,
@@ -78,7 +73,7 @@ function moveHandler(result, clientId) {
 
   if (checkDraw(result.field)) {
     [clientId, opponentClientId].forEach(cId => {
-      clientConnections[cId].connection.send(JSON.stringify({
+      clientConnections[cId].send(JSON.stringify({
         method: "result",
         message: "Draw",
         field: result.field,
@@ -88,7 +83,7 @@ function moveHandler(result, clientId) {
   }
 
   [clientId, opponentClientId].forEach(cId => {
-    clientConnections[cId].connection.send(JSON.stringify({
+    clientConnections[cId].send(JSON.stringify({
       method: "update",
       turn: result.simbol === "X" ? "O" : "X",
       field: result.field,
@@ -104,7 +99,7 @@ function closeClient(connection, clientId) {
     clientIdsWaitingMatch = clientIdsWaitingMatch.filter(unmatchedClientId => unmatchedClientId !== clientId);
   } else {
     const opponentClientId = opponents[clientId];
-    clientConnections[opponentClientId].connection.send(JSON.stringify({
+    clientConnections[opponentClientId].send(JSON.stringify({
       method: "left",
       message: "opponent left",
     }));
