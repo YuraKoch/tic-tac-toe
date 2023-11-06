@@ -1,6 +1,6 @@
 const cellElements = document.querySelectorAll('.cell');
 const messageElement = document.querySelector('.message');
-let field = ["", "", "", "", "", "", "", "", "",];
+let field = ["", "", "", "", "", "", "", "", ""];
 let isGameActive = false;
 let symbol = null;
 let turn = null;
