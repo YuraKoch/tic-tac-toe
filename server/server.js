@@ -1,34 +1,63 @@
 const express = require('express');
 const path = require('path');
-const http = require("http");
-const WebSocket = require("ws");
+const http = require('http');
+const WebSocket = require('ws');
+const {addUser} = require('../mongo/user-controller');
+const mongoose = require('mongoose');
 
 const app = express();
 app.use(express.static(path.join(__dirname, '..', 'client')));
-app.listen(3000);
 
-const httpServer = http.createServer();
+const httpServer = http.createServer(app);
 const wss = new WebSocket.Server({ server: httpServer });
-httpServer.listen(8080);
+
+const URL = 'mongodb://0.0.0.0:27017/ws';
+
+mongoose
+  .connect(URL, {})
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((err) => console.error('DB connection error:', err));
+
+
+const PORT = 3000;
+httpServer.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
+
 
 const clientConnections = {};
 const opponents = {};
 let clientIdsWaitingMatch = [];
 
-wss.on("connection", connection => {
+wss.on('connection', (connection) => {
   const clientId = createClientId();
   clientConnections[clientId] = connection;
 
   matchClients(clientId);
 
-  connection.on("message", message => {
+  connection.on('message', async (message) => {
     const result = JSON.parse(message);
-    if (result.method === "move") {
+    console.log('res',result)
+
+    if (result.method === 'setName') {
+      const playerName = result.playerName;
+      clientConnections[clientId].playerName = playerName;
+
+      try {
+        const newUser = await addUser(playerName);
+          
+        console.log('Имя пользователя сохранено в базе:', newUser);
+      } catch (error) {
+        console.error('Ошибка при сохранении имени пользователя в базе:', error);
+      }
+
+      // ////// matchClients(clientId);
+    } else if (result.method === 'move') {
       moveHandler(result, clientId);
     }
   });
 
-  connection.on("close", () => {
+  connection.on('close', () => {
     closeClient(connection, clientId);
   });
 });
@@ -107,9 +136,9 @@ function closeClient(connection, clientId) {
 }
 
 const winningCombos = [
-  [0, 1, 2], [3, 4, 5], [6, 7, 8],  // Rows
-  [0, 3, 6], [1, 4, 7], [2, 5, 8],  // Columns
-  [0, 4, 8], [2, 4, 6]              // Diagonals
+  [0, 1, 2], [3, 4, 5], [6, 7, 8], 
+  [0, 3, 6], [1, 4, 7], [2, 5, 8], 
+  [0, 4, 8], [2, 4, 6]             
 ];
 
 function checkWin(field) {
@@ -128,3 +157,25 @@ function createClientId() {
   clientIdCounter++;
   return clientIdCounter;
 }
+
+// function addUserToFile(newUser) {
+//   try {
+
+//     let data = [];
+//     try {
+//       const fileContent = fs.readFileSync('users.json', 'utf-8');
+//       data = JSON.parse(fileContent);
+//     } catch (readError) {
+//     }
+//     data.push(newUser);
+
+    
+//     fs.writeFileSync('users.json', JSON.stringify(data, null, 2), 'utf-8');
+
+//     console.log('Имя пользователя сохранено в файле:', newUser);
+//   } catch (error) {
+//     console.error('Ошибка при сохранении имени пользователя в файле:', error);
+//   }
+// }
+
+
