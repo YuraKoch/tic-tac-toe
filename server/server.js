@@ -51,7 +51,7 @@ wss.on('connection', (connection) => {
         console.error('Ошибка при сохранении имени пользователя в базе:', error);
       }
 
-      // matchClients(clientId);
+      // ////// matchClients(clientId);
     } else if (result.method === 'move') {
       moveHandler(result, clientId);
     }
