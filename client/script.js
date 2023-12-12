@@ -53,8 +53,8 @@ startGameButton.addEventListener('click', () => {
   if (playerName !== "") {
     
     ws.send(JSON.stringify({
-      "method": "setName",
-      "playerName": playerName
+      method: "setName",
+      playerName: playerName
     }));
    
     playerNameInput.style.display = "none";
